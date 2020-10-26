@@ -37,7 +37,7 @@
       tags: [ build ]
       get_url:
         url: 'https://raw.githubusercontent.com/titom73/avd-with-ansible-tower-awx/master/inventory/inventory.yml'
-        dest: './inventory.yml'
+        dest: '{{ inventory_file }}'
         mode: '0755'
       delegate_to: 127.0.0.1
 
@@ -48,7 +48,7 @@
 
     - name: Display downloaded inventory file contents
       tags: [always]
-      command: 'cat ./inventory.yml'
+      command: 'cat {{ inventory_file }}'
       register: command_output
 
     - name: Print to console
