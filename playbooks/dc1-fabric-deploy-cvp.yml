@@ -60,6 +60,7 @@
       import_role:
         name: arista.avd.eos_config_deploy_cvp
       vars:
+        inventory: '{{inventory_dir}}/inventory.yml'
         container_root: 'DC1_FABRIC'
         configlets_prefix: 'DC1-AVD'
         device_filter: 'DC1'
