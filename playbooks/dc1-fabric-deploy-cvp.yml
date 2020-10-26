@@ -37,7 +37,7 @@
       tags: [ build ]
       get_url:
         url: 'https://raw.githubusercontent.com/titom73/avd-with-ansible-tower-awx/master/inventory/inventory.yml'
-        dest: '{{ root_dir }}/inventory.yml'
+        dest: './inventory.yml'
         mode: '0755'
       delegate_to: 127.0.0.1
 
@@ -46,9 +46,9 @@
       set_fact:
         inventory_dir: '/tmp/'
 
-    - name: Display resolv.conf contents
+    - name: Display downloaded inventory file contents
       tags: [always]
-      command: 'cat {{inventory_dir}}/inventory.yml'
+      command: 'cat ./inventory.yml'
       register: command_output
 
     - name: Print to console
@@ -60,7 +60,7 @@
       import_role:
         name: arista.avd.eos_config_deploy_cvp
       vars:
-        inventory: '{{inventory_dir}}/inventory.yml'
+        inventory: './inventory.yml'
         container_root: 'DC1_FABRIC'
         configlets_prefix: 'DC1-AVD'
         device_filter: 'DC1'
