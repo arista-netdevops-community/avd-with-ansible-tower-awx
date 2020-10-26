@@ -13,7 +13,7 @@
       - [Create Inventory](#create-inventory)
       - [Add source](#add-source)
     - [Create Playbook resource](#create-playbook-resource)
-  - [Update AVD playbook](#update-avd-playbook)
+  - [Update AVD playbook](#what-to-change-to-work-with-avd-and-awx)
     - [How to install collection within project](#how-to-install-collection-within-project)
     - [How to resolve Inventory to Container issue](#how-to-resolve-inventory-to-container-issue)
   - [Run your playbook](#run-your-playbook)
@@ -199,7 +199,7 @@ collections:
 ```
 
 
-### How to resolve Inventory to Container issue
+### What to change to work with AVD and AWX
 
 Ansible has a default variable that point to inventory file used in playbook and named `{{ inventory_file }}`. Since AWX/Tower is using a database, this variable is not available anymore and [inventory file does not exist in such environment](https://github.com/ansible/awx/issues/5926).
 
