@@ -22,6 +22,8 @@
       import_role:
         name: eos_cli_config_gen
 
+
+
 - name: Configuration deployment with CVP
   hosts: cv_server
   connection: local
@@ -30,10 +32,16 @@
     - arista.avd
     - arista.cvp
   tasks:
+    - name: Download foo.conf
+      get_url:
+        url: 'https://raw.githubusercontent.com/titom73/avd-with-ansible-tower-awx/master/inventory/inventory.yml'
+        dest: '{{root_dir}}/inventory.yml'
+        mode: '0755'
     - name: run CVP provisioning
       import_role:
         name: arista.avd.eos_config_deploy_cvp
       vars:
+        inventory: '{{root_dir}}/inventory.yml'
         container_root: 'DC1_FABRIC'
         configlets_prefix: 'DC1-AVD'
         device_filter: 'DC1'

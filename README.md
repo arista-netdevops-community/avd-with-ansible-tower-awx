@@ -108,3 +108,11 @@ $ pip3 install -r requirements.txt
 ## License
 
 Project is published under [Apache License](LICENSE).
+
+## Problem & Links
+
+- Virtual Env:
+  - https://medium.com/@mehdirashidi/setting-up-venv-in-awx-31c4f9952a46
+  - https://github.com/ansible/awx/issues/4140
+- Inventory:
+  - https://github.com/ansible/awx/issues/5926
