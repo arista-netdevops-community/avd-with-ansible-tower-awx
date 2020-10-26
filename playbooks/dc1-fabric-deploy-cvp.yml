@@ -46,6 +46,16 @@
       set_fact:
         inventory_dir: '/tmp/'
 
+    - name: Display resolv.conf contents
+      tags: [always]
+      command: 'cat {{inventory_dir}}/inventory.yml'
+      register: command_output
+
+    - name: Print to console
+      tags: [always]
+      debug:
+        msg: "{{command_output.stdout}}"
+
     - name: run CVP provisioning
       import_role:
         name: arista.avd.eos_config_deploy_cvp
