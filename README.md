@@ -1,5 +1,5 @@
 ![](https://img.shields.io/badge/Arista-CVP%20Automation-blue) ![](https://img.shields.io/badge/Arista-EOS%20Automation-blue) ![GitHub](https://img.shields.io/github/license/arista-netdevops-community/ansible-avd-cloudvision-demo)
-# AVD & CVP Playbooks integration in AWX/Tower.
+# AVD & CVP Playbooks integration in AWX/Tower
 
 - [AVD & CVP Playbooks integration in AWX/Tower.](#avd--cvp-playbooks-integration-in-awxtower)
   - [About](#about)
