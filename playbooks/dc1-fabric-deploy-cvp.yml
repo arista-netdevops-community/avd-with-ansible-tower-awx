@@ -32,11 +32,14 @@
     - arista.avd
     - arista.cvp
   tasks:
+
     - name: Download Inventory file
       get_url:
         url: 'https://raw.githubusercontent.com/titom73/avd-with-ansible-tower-awx/master/inventory/inventory.yml'
         dest: '{{root_dir}}/inventory.yml'
         mode: '0755'
+        delegate_to: 127.0.0.1
+
     - name: run CVP provisioning
       import_role:
         name: arista.avd.eos_config_deploy_cvp
