@@ -34,10 +34,10 @@
   tasks:
 
     - name: Download Inventory file
+      tags: [ build ]
       get_url:
-        tags: [ build ]
         url: 'https://raw.githubusercontent.com/titom73/avd-with-ansible-tower-awx/master/inventory/inventory.yml'
-        dest: '{{root_dir}}/inventory.yml'
+        dest: '{{ root_dir }}/inventory.yml'
         mode: '0755'
         delegate_to: 127.0.0.1
 
