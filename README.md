@@ -29,6 +29,11 @@ This example shows how to deploy basic __EVPN/VXLAN Fabric__ based on __[Arista 
 - Install collections
 - Install python requirements
 
+If you want to see how to build your inventory and all related variables, it is recommended to read following documentation:
+
+- [How to start](https://www.avd.sh/docs/how-to/first-project/)
+- [L3LS EVPN Abstraction role](https://www.avd.sh/roles/eos_l3ls_evpn/)
+
 ## Requirements
 
 To play with this repsoitory, you need:
@@ -85,9 +90,32 @@ $ python3 -m venv avd-venv
 Instruct AWX to register our new Virtual Environment folder:
 
 ```shell
-$ curl -X PATCH 'http://admin:password@<IP-of-AWX-INSTANCE>/api/v2/settings/system/' -d '{"CUSTOM_VENV_PATHS": ["/opt/my-envs/"]}' -H 'Content-Type:application/json'
+$ curl -X PATCH 'http://admin:password@<IP-of-AWX-INSTANCE>/api/v2/settings/system/' \
+    -d '{"CUSTOM_VENV_PATHS": ["/opt/my-envs/"]}' -H 'Content-Type:application/json'
 
-{"ACTIVITY_STREAM_ENABLED":true,"ACTIVITY_STREAM_ENABLED_FOR_INVENTORY_SYNC":false,"ORG_ADMINS_CAN_SEE_ALL_USERS":true,"MANAGE_ORGANIZATION_AUTH":true,"TOWER_URL_BASE":"http://10.83.28.163","REMOTE_HOST_HEADERS":["REMOTE_ADDR","REMOTE_HOST"],"PROXY_IP_ALLOWED_LIST":[],"LICENSE":{},"REDHAT_USERNAME":"","REDHAT_PASSWORD":"","AUTOMATION_ANALYTICS_URL":"https://example.com","INSTALL_UUID":"f8a54d56-b1f3-4fdf-aa5b-9d6977d00eaa","CUSTOM_VENV_PATHS":["/opt/my-envs"],"INSIGHTS_TRACKING_STATE":false,"AUTOMATION_ANALYTICS_LAST_GATHER":null,"AUTOMATION_ANALYTICS_GATHER_INTERVAL":14400}
+{
+    "ACTIVITY_STREAM_ENABLED": true,
+    "ACTIVITY_STREAM_ENABLED_FOR_INVENTORY_SYNC": false,
+    "ORG_ADMINS_CAN_SEE_ALL_USERS": true,
+    "MANAGE_ORGANIZATION_AUTH": true,
+    "TOWER_URL_BASE": "http://10.83.28.163",
+    "REMOTE_HOST_HEADERS": [
+        "REMOTE_ADDR",
+        "REMOTE_HOST"
+    ],
+    "PROXY_IP_ALLOWED_LIST": [],
+    "LICENSE": {},
+    "REDHAT_USERNAME": "",
+    "REDHAT_PASSWORD": "",
+    "AUTOMATION_ANALYTICS_URL": "https://example.com",
+    "INSTALL_UUID": "f8a54d56-b1f3-4fdf-aa5b-9d6977d00eaa",
+    "CUSTOM_VENV_PATHS": [
+        "/opt/my-envs"
+    ],
+    "INSIGHTS_TRACKING_STATE": false,
+    "AUTOMATION_ANALYTICS_LAST_GATHER": null,
+    "AUTOMATION_ANALYTICS_GATHER_INTERVAL": 14400
+}
 ```
 
 ### Provision virtual-environment
