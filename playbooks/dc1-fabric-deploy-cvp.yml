@@ -41,11 +41,15 @@
         mode: '0755'
       delegate_to: 127.0.0.1
 
+    - name: 'Set fake inventory_dir variable'
+      tags: [always]
+      set_fact:
+        inventory_dir: '/tmp/'
+
     - name: run CVP provisioning
       import_role:
         name: arista.avd.eos_config_deploy_cvp
       vars:
-        inventory: '/tmp/inventory.yml'
         container_root: 'DC1_FABRIC'
         configlets_prefix: 'DC1-AVD'
         device_filter: 'DC1'
