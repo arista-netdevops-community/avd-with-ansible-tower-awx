@@ -252,9 +252,7 @@ Under __Resources > Templates__ click on the rocket icon to start playbook execu
 ## Resources
 
 - Ansible [Arista Validated Design](https://github.com/aristanetworks/ansible-avd) repository.
-- [Ansible CloudVision Collection](https://github.com/aristanetworks/ansible-cvp) repository.
-- [How to install](INSTALLATION.md) demo environment.
-- [Detailed demo script](DEMO.md).
+- Ansible [Arista CloudVision Collection](https://github.com/aristanetworks/ansible-cvp) repository.
 
 ## License
 
