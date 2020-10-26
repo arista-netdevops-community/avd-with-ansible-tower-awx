@@ -1,7 +1,7 @@
 ![](https://img.shields.io/badge/Arista-CVP%20Automation-blue) ![](https://img.shields.io/badge/Arista-EOS%20Automation-blue) ![GitHub](https://img.shields.io/github/license/arista-netdevops-community/ansible-avd-cloudvision-demo)
-# Arista Validated Design with CloudVision deployment
+# AVD & CVP Playbooks integration in AWX/Tower.
 
-- [Arista Validated Design with CloudVision deployment](#arista-validated-design-with-cloudvision-deployment)
+- [AVD & CVP Playbooks integration in AWX/Tower.](#avd--cvp-playbooks-integration-in-awxtower)
   - [About](#about)
   - [Requirements](#requirements)
   - [Install Python requirements](#install-python-requirements)
@@ -13,9 +13,9 @@
       - [Create Inventory](#create-inventory)
       - [Add source](#add-source)
     - [Create Playbook resource](#create-playbook-resource)
-  - [Update AVD playbook](#what-to-change-to-work-with-avd-and-awx)
+  - [Update AVD playbook](#update-avd-playbook)
     - [How to install collection within project](#how-to-install-collection-within-project)
-    - [How to resolve Inventory to Container issue](#how-to-resolve-inventory-to-container-issue)
+    - [What to change to work with AVD and AWX](#what-to-change-to-work-with-avd-and-awx)
   - [Run your playbook](#run-your-playbook)
   - [Resources](#resources)
   - [License](#license)
@@ -38,7 +38,7 @@ To play with this repsoitory, you need:
 
 ## Install Python requirements
 
-Ansible CVP collection comes with a needs of [additional libraries](https://github.com/titom73/avd-with-ansible-tower-awx/blob/master/requirements.txt) not part of a standard Python setup:
+Ansible CVP collection comes with a needs of [additional libraries](hhttps://github.com/arista-netdevops-community/avd-with-ansible-tower-awx/blob/master/requirements.txt) not part of a standard Python setup:
 
 ```shell
 ansible==2.9.6
@@ -120,6 +120,7 @@ First go to __Resources > Projects__ and create a new one using:
 - SCM Type: `Git`
 - SCM Branch: `master`
 - Ansible Environment: `/your/path/to/venv`
+- SCM URL: `https://github.com/arista-netdevops-community/avd-with-ansible-tower-awx.git`
 
 ![](data/awx-create-project-venv.png)
 
@@ -171,7 +172,7 @@ In this section you have to provide at least:
 - Name of your Template: _Build Fabric Configuration -- no-deploy_
 - Which inventory to use: _EMEA Demo_
 - Which project to use to get playbook: _AVD Demo with CVP_
-- Which playbook to use: [`playbooks/dc1-fabric-deploy-cvp.yml`](https://github.com/titom73/avd-with-ansible-tower-awx/blob/master/playbooks/dc1-fabric-deploy-cvp.yml)
+- Which playbook to use: [`playbooks/dc1-fabric-deploy-cvp.yml`](https://github.com/arista-netdevops-community/avd-with-ansible-tower-awx/blob/master/playbooks/dc1-fabric-deploy-cvp.yml)
 - Virtual Environment to use when running the playbook
 
 As AVD implements Ansible `TAGS`, we have specified `build` only, but you can adapt to your own setup.
@@ -187,7 +188,7 @@ You can configure more than just one playbook, but we will focus on playbook def
 Since AVD and CVP collection are not installed by default in AWX, you need to consider how to install them. You have 2 option: system wise or per project. Let's consider per project as it is easier to upgrade
 
 - Create a folder named `collections` in your git project
-- Create a YAML file named [`requirements.yml`](https://github.com/titom73/avd-with-ansible-tower-awx/blob/master/README.md) with the following structure:
+- Create a YAML file named [`requirements.yml`](https://github.com/arista-netdevops-community/avd-with-ansible-tower-awx/blob/master/README.md) with the following structure:
 
 ```yaml
 ---
