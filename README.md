@@ -1,5 +1,24 @@
-![](https://img.shields.io/badge/Arista-CVP%20Automation-blue) ![](https://img.shields.io/badge/Arista-EOS%20Automation-blue) ![Ansible Code Execution](https://github.com/arista-netdevops-community/ansible-avd-cloudvision-demo/workflows/Ansible%20Code%20Execution/badge.svg) ![GitHub](https://img.shields.io/github/license/arista-netdevops-community/ansible-avd-cloudvision-demo)
+![](https://img.shields.io/badge/Arista-CVP%20Automation-blue) ![](https://img.shields.io/badge/Arista-EOS%20Automation-blue) ![GitHub](https://img.shields.io/github/license/arista-netdevops-community/ansible-avd-cloudvision-demo)
 # Arista Validated Design with CloudVision deployment
+
+- [Arista Validated Design with CloudVision deployment](#arista-validated-design-with-cloudvision-deployment)
+  - [About](#about)
+  - [Requirements](#requirements)
+  - [Install Python requirements](#install-python-requirements)
+    - [Create virtual-environment](#create-virtual-environment)
+    - [Provision virtual-environment](#provision-virtual-environment)
+  - [Create AVD project on AWX](#create-avd-project-on-awx)
+    - [Create a project resource](#create-a-project-resource)
+    - [Create Inventory resource](#create-inventory-resource)
+      - [Create Inventory](#create-inventory)
+      - [Add source](#add-source)
+    - [Create Playbook resource](#create-playbook-resource)
+  - [Update AVD playbook](#update-avd-playbook)
+    - [How to install collection within project](#how-to-install-collection-within-project)
+    - [How to resolve Inventory to Container issue](#how-to-resolve-inventory-to-container-issue)
+  - [Run your playbook](#run-your-playbook)
+  - [Resources](#resources)
+  - [License](#license)
 
 ## About
 
@@ -19,7 +38,7 @@ To play with this repsoitory, you need:
 
 ## Install Python requirements
 
-Ansible CVP collection comes with a needs of [additional libraries](requirements.txt) not part of a standard Python setup:
+Ansible CVP collection comes with a needs of [additional libraries](https://github.com/titom73/avd-with-ansible-tower-awx/blob/master/requirements.txt) not part of a standard Python setup:
 
 ```shell
 ansible==2.9.6
@@ -34,7 +53,7 @@ jsonschema==3.2.0
 
 ### Create virtual-environment
 
-It is required to create virtual-env to not impact other workflow already deployed on your Tower setup.
+It is required to create [virtual-env](https://medium.com/@mehdirashidi/setting-up-venv-in-awx-31c4f9952a46) to not impact other workflow already deployed on your Tower setup.
 
 ```shell
 # Docker status
@@ -61,7 +80,7 @@ $ cd /opt/my-envs/
 $ python3 -m venv avd-venv
 ```
 
-> This configuration __MUST__ be replicated on both container `awx_task` and `awx_web`
+> This configuration [__MUST__](https://github.com/ansible/awx/issues/4140) be replicated on both container `awx_task` and `awx_web`
 
 Instruct AWX to register our new Virtual Environment folder:
 
@@ -78,25 +97,157 @@ Before running playbook in a virtual-env, we have to install required libraries:
 ```shell
 tom@kube-tool:~$ docker exec -it awx_task bash
 
+# Activate virtual-env
 $ cd /opt/my-envs/avd-venv
-
-$ vi requirements.txt
-
 $ source bin/activate
 
+# Install ansible AWX base lib
 $ pip3 install psutil
 
+# Install project requirements
+$ curl -fsSL https://raw.githubusercontent.com/aristanetworks/ansible-avd/devel/development/requirements.txt 0o requirements.txt
 $ pip3 install -r requirements.txt
 ```
 
-## Create a new project
+From here, you have a clean python environment with all the expected requirements installed on your AWX runner.
 
-### Create Project
+## Create AVD project on AWX
 
-### Create Inventory
+### Create a project resource
 
-### Create Playbook
+First go to __Resources > Projects__ and create a new one using:
 
+- SCM Type: `Git`
+- SCM Branch: `master`
+- Ansible Environment: `/your/path/to/venv`
+
+![](data/awx-create-project-venv.png)
+
+This project will be used for 2 things:
+
+- Get our inventory and all attached variables.
+- Get our playbooks to run in AWX.
+
+### Create Inventory resource
+
+Next action is to create an inventory in AWX. It is a 2 step actions:
+
+#### Create Inventory
+
+Go to __Resources > Inventory__
+
+![](data/awx-create-inventory.png)
+
+Once ready, you need to add a source to your inventory
+
+#### Add source
+
+In your inventory, select __Sources__
+
+![](data/awx-inventory-add-source.png)
+
+Then add a source using your existing project
+
+![](data/awx-create-source.png)
+
+In our example, our inventory file is part of a subdirectory. So we had to type the path manually as it was not part of the suggestion list. Also, don't forget to specificy virtual-env to use with this inventory.
+
+Onc you click on `Save` button, select __SYNC-ALL__ button to get all hosts part of your inventory:
+
+![](data/awx-inventory-add-source.png)
+
+You should get all your devices in __Resources > Inventory > Your inventory Name__
+
+![](data/awx-inventory-list-devices.png)
+
+Now we can focus on playbook itself.
+
+### Create Playbook resource
+
+Go to __Resources > Templates__.
+
+In this section you have to provide at least:
+
+- Name of your Template: _Build Fabric Configuration -- no-deploy_
+- Which inventory to use: _EMEA Demo_
+- Which project to use to get playbook: _AVD Demo with CVP_
+- Which playbook to use: [`playbooks/dc1-fabric-deploy-cvp.yml`](https://github.com/titom73/avd-with-ansible-tower-awx/blob/master/playbooks/dc1-fabric-deploy-cvp.yml)
+- Virtual Environment to use when running the playbook
+
+As AVD implements Ansible `TAGS`, we have specified `build` only, but you can adapt to your own setup.
+
+![](data/awx-create-template.png)
+
+You can configure more than just one playbook, but we will focus on playbook definition as it is not an AWX user's guide.
+
+## Update AVD playbook
+
+### How to install collection within project
+
+Since AVD and CVP collection are not installed by default in AWX, you need to consider how to install them. You have 2 option: system wise or per project. Let's consider per project as it is easier to upgrade
+
+- Create a folder named `collections` in your git project
+- Create a YAML file named [`requirements.yml`](https://github.com/titom73/avd-with-ansible-tower-awx/blob/master/README.md) with the following structure:
+
+```yaml
+---
+collections:
+  - name: arista.avd
+    version: 1.1.0
+  - name: arista.cvp
+    version: 2.1.0
+```
+
+
+### How to resolve Inventory to Container issue
+
+Ansible has a default variable that point to inventory file used in playbook and named `{{ inventory_file }}`. Since AWX/Tower is using a database, this variable is not available anymore and [inventory file does not exist in such environment](https://github.com/ansible/awx/issues/5926).
+
+AVD use this variable to read inventory and to build container topology on Cloudvision. So to mitigate this behavior, a small warkaround is to add a task that download your inventory from your git repository and define `{{ inventory_file }}`:
+
+- Define variable:
+
+```yaml
+#group_vars/all.yml
+---
+inventory_file: '/tmp/inventory.yml'
+```
+
+- Update playbook
+
+```yaml
+- name: Configuration deployment with CVP
+  hosts: cv_server
+  connection: local
+  gather_facts: false
+  collections:
+    - arista.avd
+    - arista.cvp
+  tasks:
+
+    - name: Download Inventory file
+      tags: [ build ]
+      get_url:
+        url: 'https://raw.githubusercontent.com/titom73/avd-with-ansible-tower-awx/master/inventory/inventory.yml'
+        dest: '{{ inventory_file }}'
+        mode: '0755'
+      delegate_to: 127.0.0.1
+
+    - name: run CVP provisioning
+      import_role:
+        name: arista.avd.eos_config_deploy_cvp
+      vars:
+        container_root: 'DC1_FABRIC'
+        configlets_prefix: 'DC1-AVD'
+        device_filter: 'DC1'
+        state: present
+```
+
+## Run your playbook
+
+Under __Resources > Templates__ click on the rocket icon to start playbook execution
+
+![](data/awx-playbook-run.png)
 
 ## Resources
 
@@ -109,10 +260,3 @@ $ pip3 install -r requirements.txt
 
 Project is published under [Apache License](LICENSE).
 
-## Problem & Links
-
-- Virtual Env:
-  - https://medium.com/@mehdirashidi/setting-up-venv-in-awx-31c4f9952a46
-  - https://github.com/ansible/awx/issues/4140
-- Inventory:
-  - https://github.com/ansible/awx/issues/5926

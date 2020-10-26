@@ -41,21 +41,6 @@
         mode: '0755'
       delegate_to: 127.0.0.1
 
-    - name: 'Set fake inventory_dir variable'
-      tags: [always]
-      set_fact:
-        inventory_dir: '/tmp/'
-
-    - name: Display downloaded inventory file contents
-      tags: [always]
-      command: 'cat {{ inventory_file }}'
-      register: command_output
-
-    - name: Print to console
-      tags: [always]
-      debug:
-        msg: "{{command_output.stdout}}"
-
     - name: run CVP provisioning
       import_role:
         name: arista.avd.eos_config_deploy_cvp
