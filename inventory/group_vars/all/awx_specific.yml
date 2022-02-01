@@ -1,0 +1,3 @@
+---
+# root_dir: '/tmp/'
+# inventory_file: '{{root_dir}}/inventory.yml'

@@ -2,24 +2,24 @@
 # L3LS Fabric Values - update these values with caution,
 # SOME CHANGES COULD BE DISRUPTIVE.
 
-fabric_name: DC1_FABRIC
+fabric_name: ATD_FABRIC
 
 # Point to Point Network Summary range, assigned as /31 for each
 # uplink interfaces
-# Assign range larger then total [spines * total potential leafs * 2]
+# Assign range larger then total [Spines * total potential leafs * 2]
 underlay_p2p_network_summary: 172.31.255.0/24
 
 # IP address range for evpn loopback for all switches in fabric,
 # assigned as /32s
-# Assign range larger then total spines + total leafs switches
-overlay_loopback_network_summary: 192.168.255.0/24
+# Assign range larger then total Spines + total leafs switches
+overlay_loopback_network_summary: 192.0.255.0/24
 
 # VTEP VXLAN Tunnel source loopback IP for leaf switches, assigned in /32s
 # Assign range larger then total leaf switches
-vtep_loopback_network_summary: 192.168.254.0/24
+vtep_loopback_network_summary: 192.0.254.0/24
 
 # mlag pair IP assignment - assign blocks - Assign range larger then
-# total spines + total leafs switches
+# total Spines + total leafs switches
 mlag_ips:
   leaf_peer_l3: 10.255.251.0/24
   mlag_peer: 10.255.252.0/24
@@ -43,12 +43,12 @@ spine:
   # defines the range of acceptable remote ASNs from leaf switches
   leaf_as_range: 65101-65132
   nodes:
-    DC1-SPINE1:
+    spine1:
       id: 1
-      mgmt_ip: 10.255.0.11/24
-    DC1-SPINE2:
+      mgmt_ip: 192.168.0.10/24
+    spine2:
       id: 2
-      mgmt_ip: 10.255.0.12/24
+      mgmt_ip: 192.168.0.11/24
 
 # Leaf switch groups
 # A maximum of two nodes can form a leaf group
@@ -61,65 +61,34 @@ l3leaf:
     virtual_router_mac_address: 00:1c:73:00:dc:01
     platform: vEOS-LAB
     bgp_as: 65100
-    spines: [DC1-SPINE1, DC1-SPINE2]
-    uplink_to_spine_interfaces: [Ethernet1, Ethernet2]
-    mlag_interfaces: [Ethernet3, Ethernet4]
+    spines: [spine1, spine2]
+    uplink_to_spine_interfaces: [Ethernet2, Ethernet3]
+    mlag_interfaces: [Ethernet1]
     spanning_tree_priority: 4096
     spanning_tree_mode: mstp
   node_groups:
-    DC1_LEAF1:
+    pod1:
       bgp_as: 65101
       nodes:
-        DC1-LEAF1A:
+        leaf1:
           id: 1
-          mgmt_ip: 10.255.0.13/24
-          spine_interfaces: [Ethernet1, Ethernet1]
-        DC1-LEAF1B:
-          id: 2
-          mgmt_ip: 10.255.0.14/24
+          mgmt_ip: 192.168.0.12/24
           spine_interfaces: [Ethernet2, Ethernet2]
-    DC1_LEAF2:
+        leaf2:
+          id: 2
+          mgmt_ip: 192.168.0.13/24
+          spine_interfaces: [Ethernet3, Ethernet3]
+    pod2:
       bgp_as: 65102
       nodes:
-        DC1-LEAF2A:
+        leaf3:
           id: 3
-          mgmt_ip: 10.255.0.15/24
-          spine_interfaces: [Ethernet3, Ethernet3]
-        DC1-LEAF2B:
-          id: 4
-          mgmt_ip: 10.255.0.16/24
+          mgmt_ip: 192.168.0.14/24
           spine_interfaces: [Ethernet4, Ethernet4]
-
-
-l2leaf:
-  defaults:
-    platform: vEOS-LAB
-    parent_l3leafs: [ DC1-LEAF1A, DC1-LEAF1B ]
-    uplink_interfaces: [ Ethernet1, Ethernet2 ]
-    mlag_interfaces: [ Ethernet3, Ethernet4 ]
-    spanning_tree_mode: mstp
-    spanning_tree_priority: 16384
-  node_groups:
-    DC1_L2LEAF1:
-      parent_l3leafs: [ DC1-LEAF1A, DC1-LEAF1B ]
-      filter:
-        tenants: [ Tenant_A ]
-        tags: [ opzone, web, app ]
-      nodes:
-        DC1-L2LEAF1A:
-          id: 5
-          mgmt_ip: 10.255.0.17/24
-          l3leaf_interfaces: [ Ethernet5, Ethernet5 ]
-    DC1_L2LEAF2:
-      parent_l3leafs: [ DC1-LEAF2A, DC1-LEAF2B ]
-      filter:
-        tenants: [ Tenant_A ]
-        tags: [ opzone, web, app ]
-      nodes:
-        DC1-L2LEAF2A:
-          id: 7
-          mgmt_ip: 10.255.0.18/24
-          l3leaf_interfaces: [ Ethernet5, Ethernet5 ]
+        leaf4:
+          id: 4
+          mgmt_ip: 192.168.0.15/24
+          spine_interfaces: [Ethernet5, Ethernet5]
 
 #### Override for vEOS Lab Caveats ####
 
@@ -158,3 +127,10 @@ bfd_multihop:
 #   containers:
 #     DC1_L3LEAFS:
 #       - ASE_GLOBAL-ALIASES
+
+ansible_connection: httpapi
+ansible_network_os: eos
+ansible_become: true
+ansible_become_method: enable
+ansible_httpapi_use_ssl: true
+ansible_httpapi_validate_certs: false
