@@ -1,22 +1,24 @@
 ![](https://img.shields.io/badge/Arista-CVP%20Automation-blue) ![](https://img.shields.io/badge/Arista-EOS%20Automation-blue) ![GitHub](https://img.shields.io/github/license/arista-netdevops-community/ansible-avd-cloudvision-demo)
 # AVD & CVP Playbooks integration in AWX/Tower
 
-- [AVD & CVP Playbooks integration in AWX/Tower.](#avd--cvp-playbooks-integration-in-awxtower)
+- [AVD & CVP Playbooks integration in AWX/Tower](#avd--cvp-playbooks-integration-in-awxtower)
   - [About](#about)
+    - [Disclaimer](#disclaimer)
+    - [Before starting](#before-starting)
   - [Requirements](#requirements)
-  - [Install Python requirements](#install-python-requirements)
-    - [Create virtual-environment](#create-virtual-environment)
-    - [Provision virtual-environment](#provision-virtual-environment)
-  - [Create AVD project on AWX](#create-avd-project-on-awx)
-    - [Create a project resource](#create-a-project-resource)
-    - [Create Inventory resource](#create-inventory-resource)
-      - [Create Inventory](#create-inventory)
-      - [Add source](#add-source)
-    - [Create Playbook resource](#create-playbook-resource)
-  - [Update AVD playbook](#update-avd-playbook)
-    - [How to install collection within project](#how-to-install-collection-within-project)
-    - [What to change to work with AVD and AWX](#what-to-change-to-work-with-avd-and-awx)
-  - [Run your playbook](#run-your-playbook)
+  - [AWX Installation](#awx-installation)
+    - [Deploy AWX Operator](#deploy-awx-operator)
+    - [Deploy an AWX instance](#deploy-an-awx-instance)
+      - [AWX manifest](#awx-manifest)
+      - [AWX deployment](#awx-deployment)
+      - [Get access information](#get-access-information)
+  - [Configure AWX](#configure-awx)
+    - [Create Ansible Execution Environment](#create-ansible-execution-environment)
+    - [Install Ansible Execution Environment](#install-ansible-execution-environment)
+    - [Configure a Project](#configure-a-project)
+    - [Create inventory](#create-inventory)
+    - [Create Template (aka Playbook)](#create-template-aka-playbook)
+  - [What's next ?](#whats-next-)
   - [Resources](#resources)
   - [License](#license)
 
@@ -29,261 +31,249 @@ This example shows how to deploy basic __EVPN/VXLAN Fabric__ based on __[Arista 
 - Install collections
 - Install python requirements
 
+### Disclaimer
+
+This guide is based on our field experience and it is not considered as an official AWX/Tower design guide.
+
+### Before starting
+
 If you want to see how to build your inventory and all related variables, it is recommended to read following documentation:
 
 - [How to start](https://www.avd.sh/docs/how-to/first-project/)
 - [L3LS EVPN Abstraction role](https://www.avd.sh/roles/eos_l3ls_evpn/)
 
+This guide describe how to install and configure AWX to run Arista AVD ansible collection using official approach as per [AWX repository](https://github.com/ansible/awx/blob/devel/INSTALL.md#the-awx-operator) and requires to have a Kubernetes cluster available to install awx operator.
+
 ## Requirements
 
 To play with this repsoitory, you need:
 
-- An AWX setup running on either Docker Compose or Kubernetes. All the commands for Python configuration will be done on docker-compose, but you can adapt for kubernetes.
-- Understanding of how to configure AVD in a pure Ansible CLI way.
+- A kubernetes cluster set up and ready to use. [AWX Operator repository](https://github.com/ansible/awx-operator) uses [minikube](https://minikube.sigs.k8s.io/docs/), but any flavor can be used.
+- A docker engine or podman to build Ansible Execution Engine.
 
-## Install Python requirements
+## AWX Installation
 
-Ansible CVP collection comes with a needs of [additional libraries](hhttps://github.com/arista-netdevops-community/avd-with-ansible-tower-awx/blob/master/requirements.txt) not part of a standard Python setup:
+### Deploy AWX Operator
 
-```shell
-ansible==2.9.6
-netaddr==0.7.19
-Jinja2==2.10.3
-requests==2.22.0
-treelib==1.5.5
-cvprac==1.0.4
-paramiko==2.7.1
-jsonschema==3.2.0
+If you do not have installed AWX operator yet, you can install it with the following commands:
+
+```bash
+# Clone repository
+$ git clone https://github.com/ansible/awx-operator.git
+
+# Create namespace in kubernetes
+$ kubectl create namespace awx-avd-demo
+namespace/awx-avd-demo created
+
+kubectl config set-context --current --namespace=awx-avd-demo
+Context "minikube" modified
+
+# Deploy operator
+$ cd awx-operator
+$ export NAMESPACE=awx-avd-demo
+$ make deploy
 ```
 
-### Create virtual-environment
+Full step by step is available on [AWX Operator repository](https://github.com/ansible/awx-operator)
 
-It is required to create [virtual-env](https://medium.com/@mehdirashidi/setting-up-venv-in-awx-31c4f9952a46) to not impact other workflow already deployed on your Tower setup.
+### Deploy an AWX instance
 
-```shell
-# Docker status
-tom@kube-tool:~$ docker ps
-CONTAINER ID        IMAGE                COMMAND                  CREATED             STATUS              PORTS                  NAMES
-4a4627b21f93        ansible/awx:15.0.0   "/usr/bin/tini -- /u…"   8 days ago          Up 8 days           8052/tcp               awx_task
-6ef41f162226        ansible/awx:15.0.0   "/usr/bin/tini -- /b…"   8 days ago          Up 8 days           0.0.0.0:80->8052/tcp   awx_web
-a2fd85d0cc86        postgres:10          "docker-entrypoint.s…"   8 days ago          Up 8 days           5432/tcp               awx_postgres
-573d03e33c44        redis                "docker-entrypoint.s…"   8 days ago          Up 8 days           6379/tcp               awx_redis
+All the following steps will be executed in this repository as it provides both ansible content and AWX deployment manifest
 
-# Run shell in docker
-tom@kube-tool:~$ docker exec -it awx_task bash
+#### AWX manifest
 
-$ sudo pip3 install virtualenv
-WARNING: Running pip install with root privileges is generally not a good idea. Try `pip3 install --user` instead.
-Requirement already satisfied: virtualenv in /usr/local/lib/python3.6/site-packages
-
-$ mkdir /opt/my-envs
-
-$ chmod 0755 /opt/my-envs
-
-$ cd /opt/my-envs/
-
-$ python3 -m venv avd-venv
+```yaml
+# manifests/awx-instance.yml
+---
+apiVersion: awx.ansible.com/v1beta1
+kind: AWX
+metadata:
+  name: awx-for-avd-demo
+spec:
+  service_type: nodeport
 ```
 
-> This configuration [__MUST__](https://github.com/ansible/awx/issues/4140) be replicated on both container `awx_task` and `awx_web`
+#### AWX deployment
 
-Instruct AWX to register our new Virtual Environment folder:
+To deploy AWX, just run the following command:
 
-```shell
-$ curl -X PATCH 'http://admin:password@<IP-of-AWX-INSTANCE>/api/v2/settings/system/' \
-    -d '{"CUSTOM_VENV_PATHS": ["/opt/my-envs/"]}' -H 'Content-Type:application/json'
+```bash
+# Check operator is active
+$ kubectl get pods
+NAME                                               READY   STATUS    RESTARTS   AGE
+awx-operator-controller-manager-6d959bd7dd-nwjz8   2/2     Running   0          6m54s
 
-{
-    "ACTIVITY_STREAM_ENABLED": true,
-    "ACTIVITY_STREAM_ENABLED_FOR_INVENTORY_SYNC": false,
-    "ORG_ADMINS_CAN_SEE_ALL_USERS": true,
-    "MANAGE_ORGANIZATION_AUTH": true,
-    "TOWER_URL_BASE": "http://10.83.28.163",
-    "REMOTE_HOST_HEADERS": [
-        "REMOTE_ADDR",
-        "REMOTE_HOST"
-    ],
-    "PROXY_IP_ALLOWED_LIST": [],
-    "LICENSE": {},
-    "REDHAT_USERNAME": "",
-    "REDHAT_PASSWORD": "",
-    "AUTOMATION_ANALYTICS_URL": "https://example.com",
-    "INSTALL_UUID": "f8a54d56-b1f3-4fdf-aa5b-9d6977d00eaa",
-    "CUSTOM_VENV_PATHS": [
-        "/opt/my-envs"
-    ],
-    "INSIGHTS_TRACKING_STATE": false,
-    "AUTOMATION_ANALYTICS_LAST_GATHER": null,
-    "AUTOMATION_ANALYTICS_GATHER_INTERVAL": 14400
-}
+# Deploy AWX
+$ kubectl apply -f manifests/awx-instance.yml
+
+# Monitor deployment (it can take time to appear)
+$ kubectl get pods -l "app.kubernetes.io/managed-by=awx-operator"
+NAME                        READY   STATUS    RESTARTS   AGE
+awx-demo-postgres-0         1/1     Running   0          24s
+awx-demo-6f58cd7b8d-6dpwr   4/4     Running   0          6s
 ```
 
-### Provision virtual-environment
+Once container are UP and running, you should monitor logs to check provisioning completion:
 
-Before running playbook in a virtual-env, we have to install required libraries:
-
-```shell
-tom@kube-tool:~$ docker exec -it awx_task bash
-
-# Activate virtual-env
-$ cd /opt/my-envs/avd-venv
-$ source bin/activate
-
-# Install ansible AWX base lib
-$ pip3 install psutil
-
-# Install project requirements
-$ curl -fsSL https://raw.githubusercontent.com/aristanetworks/ansible-avd/devel/development/requirements.txt 0o requirements.txt
-$ pip3 install -r requirements.txt
+```bash
+$ kubectl logs -f deployments/awx-operator-controller-manager -c awx-manager
+...
+PLAY RECAP *********************************************************************
+localhost                  : ok=62   changed=0    unreachable=0    failed=0    skipped=45   rescued=0    ignored=0
 ```
 
-From here, you have a clean python environment with all the expected requirements installed on your AWX runner.
+#### Get access information
 
-## Create AVD project on AWX
+AWX instance is available via a node port. So you can use following command:
 
-### Create a project resource
+```bash
+# For minikube
+minikube service awx-demo-service --url -n $NAMESPACE
 
-First go to __Resources > Projects__ and create a new one using:
+# For other flavors
+$ kubectl get services
+NAME                                              TYPE        CLUSTER-IP      EXTERNAL-IP   PORT(S)        AGE
+awx-operator-controller-manager-metrics-service   ClusterIP   10.152.183.37   <none>        8443/TCP       14m
+awx-demo-postgres                                 ClusterIP   None            <none>        5432/TCP       6m35s
+awx-demo-service                                  NodePort    10.152.183.71   <none>        80:31025/TCP   6m19s
+```
 
-- SCM Type: `Git`
-- SCM Branch: `master`
-- Ansible Environment: `/your/path/to/venv`
-- SCM URL: `https://github.com/arista-netdevops-community/avd-with-ansible-tower-awx.git`
+> In this example, instance is listening on port `31025`
 
-![](data/awx-create-project-venv.png)
+AWX Credentials are `admin` and password generated by Kubernetes
+
+```bash
+kubectl get secret awx-demo-admin-password -o jsonpath="{.data.password}" | base64 --decode
+O2WBkBTW7CKWUZLqm263PklCL5m7K0GU
+```
+
+## Configure AWX
+
+### Create Ansible Execution Environment
+
+Ansible has recently introduced [Execution Environment](https://docs.ansible.com/automation-controller/latest/html/userguide/execution_environments.html) which is basically a container to execute your playbooks. The main interest is you don't have to build a virtual environment in AWX.
+
+To build such container, you need docker or podman as well as [`ansible-builder`](https://www.ansible.com/blog/introduction-to-ansible-builder).
+
+```bash
+$ pip install ansible-builder
+```
+
+And then you have to define your builder file:
+
+```yaml
+---
+version: 1
+
+build_arg_defaults:
+  EE_BASE_IMAGE: 'quay.io/ansible/ansible-runner:stable-2.12-devel'
+
+dependencies:
+  galaxy: requirements.yml
+  python: requirements.txt
+
+additional_build_steps:
+  prepend: |
+    RUN pip install --upgrade pip setuptools
+    RUN yum install -y \
+        make \
+        wget \
+        curl \
+        less \
+        git \
+        zsh \
+        vim \
+        sshpass
+```
+
+> Note that collection definition is part of [requirements.yml](./requirements.yml). So a new image should be build each time you want to upgrade to a new avd or cvp collection.
+
+To build image, nothing complex:
+
+```bash
+$ ansible-builder -f exeution-environment.yml -t <your-docker-image:tag>
+```
+
+Ansible version for runner can be found in [ansible-runner registry](quay.io/ansible/ansible-runner)
+
+Also upload image to a registry.
+
+```bash
+$ docker push <your-docker-image:tag>
+```
+
+### Install Ansible Execution Environment
+
+After your image has been uploaded on a public or private registry, you can define this Execution Environment in AWX (__Administration__ / __Execution Environments__)
+
+![Add Ansible Execution Environment](./data/awx-create-execution-env.png)
+
+> If your image is on a private registry, you have to create credentials for your registry
+
+![List of available execution environment](./data/awx-list-execution-env.png)
+
+### Configure a Project
+
+Now we will use this repository as source for both playbooks and inventory. Go to __Resources__ / __Projects__ and select __Add__
 
 This project will be used for 2 things:
 
 - Get our inventory and all attached variables.
 - Get our playbooks to run in AWX.
 
-### Create Inventory resource
+Configure project with:
 
-Next action is to create an inventory in AWX. It is a 2 step actions:
+- SCM Type: Git
+- SCM Branch: master
+- Ansible Environment: /your/path/to/venv
+- SCM URL: <https://github.com/arista-netdevops-community/avd-with-ansible-tower-awx.git>
 
-#### Create Inventory
+![Add project](data/awx-project-add.png)
 
-Go to __Resources > Inventory__
+Don't forget the following elements:
 
-![](data/awx-create-inventory.png)
+- Set correct Execution Environment from the list.
+- Select correct branch
+- Configure optional credentials if required
 
-Once ready, you need to add a source to your inventory
+### Create inventory
 
-#### Add source
+We can now create inventory in AWX in __Resources__ / __Inventories__ and select __Add Inventory__
 
-In your inventory, select __Sources__
+![Create Inventory](data/awx-inventory-create.png)
 
-![](data/awx-inventory-add-source.png)
+Click Save and and then on __Sources__
 
-Then add a source using your existing project
+![Add source](./data/awx-inventory-add-source.png)
 
-![](data/awx-create-source.png)
+And then, complete information:
 
-In our example, our inventory file is part of a subdirectory. So we had to type the path manually as it was not part of the suggestion list. Also, don't forget to specificy virtual-env to use with this inventory.
+![Configure Inventory source](data/awx-inventory-add-source-configuration.png)
 
-Onc you click on `Save` button, select __SYNC-ALL__ button to get all hosts part of your inventory:
+### Create Template (aka Playbook)
 
-![](data/awx-inventory-add-source.png)
+Template is in charge of the glue between inventory, execution environment and playbook to run.
 
-You should get all your devices in __Resources > Inventory > Your inventory Name__
+Go to __Resources__ / __Templates__ and select __Add Job Template__
 
-![](data/awx-inventory-list-devices.png)
+![Add Template](./data/awx-template-add.png)
 
-Now we can focus on playbook itself.
+In this section, feel free to use your tags based on your need. Here playbook will execute only build and not deploy and will skip documentation.
 
-### Create Playbook resource
+## What's next ?
 
-Go to __Resources > Templates__.
+Now everything is set and you should be able to run your playbook or build your own workflow !
 
-In this section you have to provide at least:
-
-- Name of your Template: _Build Fabric Configuration -- no-deploy_
-- Which inventory to use: _EMEA Demo_
-- Which project to use to get playbook: _AVD Demo with CVP_
-- Which playbook to use: [`playbooks/dc1-fabric-deploy-cvp.yml`](https://github.com/arista-netdevops-community/avd-with-ansible-tower-awx/blob/master/playbooks/dc1-fabric-deploy-cvp.yml)
-- Virtual Environment to use when running the playbook
-
-As AVD implements Ansible `TAGS`, we have specified `build` only, but you can adapt to your own setup.
-
-![](data/awx-create-template.png)
-
-You can configure more than just one playbook, but we will focus on playbook definition as it is not an AWX user's guide.
-
-## Update AVD playbook
-
-### How to install collection within project
-
-Since AVD and CVP collection are not installed by default in AWX, you need to consider how to install them. You have 2 option: system wise or per project. Let's consider per project as it is easier to upgrade
-
-- Create a folder named `collections` in your git project
-- Create a YAML file named [`requirements.yml`](https://github.com/arista-netdevops-community/avd-with-ansible-tower-awx/blob/master/README.md) with the following structure:
-
-```yaml
----
-collections:
-  - name: arista.avd
-    version: 1.1.0
-  - name: arista.cvp
-    version: 2.1.0
-```
-
-
-### What to change to work with AVD and AWX
-
-Ansible has a default variable that point to inventory file used in playbook and named `{{ inventory_file }}`. Since AWX/Tower is using a database, this variable is not available anymore and [inventory file does not exist in such environment](https://github.com/ansible/awx/issues/5926).
-
-AVD use this variable to read inventory and to build container topology on Cloudvision. So to mitigate this behavior, a small warkaround is to add a task that download your inventory from your git repository and define `{{ inventory_file }}`:
-
-- Define variable:
-
-```yaml
-#group_vars/all.yml
----
-inventory_file: '/tmp/inventory.yml'
-```
-
-- Update playbook
-
-```yaml
-- name: Configuration deployment with CVP
-  hosts: cv_server
-  connection: local
-  gather_facts: false
-  collections:
-    - arista.avd
-    - arista.cvp
-  tasks:
-
-    - name: Download Inventory file
-      tags: [ build ]
-      get_url:
-        url: 'https://raw.githubusercontent.com/titom73/avd-with-ansible-tower-awx/master/inventory/inventory.yml'
-        dest: '{{ inventory_file }}'
-        mode: '0755'
-      delegate_to: 127.0.0.1
-
-    - name: run CVP provisioning
-      import_role:
-        name: arista.avd.eos_config_deploy_cvp
-      vars:
-        container_root: 'DC1_FABRIC'
-        configlets_prefix: 'DC1-AVD'
-        device_filter: 'DC1'
-        state: present
-```
-
-## Run your playbook
-
-Under __Resources > Templates__ click on the rocket icon to start playbook execution
-
-![](data/awx-playbook-run.png)
+![AWX running playbook](data/awx-run.png)
 
 ## Resources
 
 - Ansible [Arista Validated Design](https://github.com/aristanetworks/ansible-avd) repository.
 - Ansible [Arista CloudVision Collection](https://github.com/aristanetworks/ansible-cvp) repository.
+- [AWX Operator repository](https://github.com/ansible/awx-operator)
+- [Minikube](https://minikube.sigs.k8s.io/docs/)
+- [Ansible builder](https://www.ansible.com/blog/introduction-to-ansible-builder)
 
 ## License
 
 Project is published under [Apache License](LICENSE).
-
